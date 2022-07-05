@@ -1,6 +1,6 @@
 id=com.github.himanga.JMPValidation
 name=Validation
 supportJmpSE=0
-addinVersion=0.01
+addinVersion=0.02
 minJmpVersion=16
 host=Win
