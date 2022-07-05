@@ -1,0 +1,745 @@
+﻿/* About: New Validation Column
+
+Create validation column using a few grouping strategies
+
+Section: Globals
+*/
+
+Names default to here( 1 );
+
+// About: Customize this file
+// Set this to the add-in ID
+thisAddIn = "com.github.himanga.JMPValidation";
+
+// About: get or make namespace for this add-in
+If( 
+	!Namespace Exists( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = New Namespace( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = Namespace( Eval( thisAddIn ) || ".addinnamespace" )
+);
+ns:logusage( "Create Validation Column" );
+
+ToLog = Function( {m, level = 9},
+	If(n Items(Loc(Namespace("window") << Get Keys, "LogLevel" ))<1,window:LogLevel = 9;show("No log level set yet, using 9"));
+	If( level <= window:LogLevel,
+		Eval( Eval Expr( Show( Expr( Name Expr(m) ) ) ) );
+		Eval( Eval Expr( ns:logusage( Expr( Name Expr(m) ) ) ) );
+	)
+);
+
+if(ntable() < 1, throw("Open a data table first."));
+
+dtMaster = Current data table();
+
+TimeSeriesChart = function( {dt, var, colValidation, colTime, t},
+	ToLog("In TimeSeriesChart", 7);
+	if( var != {}, //There is a target variable
+		Eval( Eval Expr(
+			timegraph = h list box(dt << Graph Builder(
+				Size( 400, 400 ),
+				Show Control Panel( 0 ),
+				Variables(
+					X( Expr( Name Expr( colTime ) ) ),
+					//Y( Expr( if(var != "Row", Name Expr( var ), . ) )),
+					Y( Expr( Name Expr( var ) ) ),
+					Overlay( Expr( Name Expr( colValidation ) ) )
+				),
+				Elements( Points( X, Y, Legend( 3 ) ) ),
+				SendToReport(
+					Dispatch(
+						{},
+						"400",
+						ScaleBox,
+						{Legend Model(
+							3,
+							Properties( 0, {Line Color( 32 )}, Item ID( "Training", 1 ) ),
+							Properties( 1, {Line Color( 11 )}, Item ID( "Validation", 1 ) ),
+							Properties( 2, {Line Color( 5 )}, Item ID( "Test", 1 ) )
+						)}
+					)
+				)
+			));
+		) );
+	,	//There is no target, use the row instead
+		Eval( Eval Expr(
+			timegraph = h list box( window:dtSub << Graph Builder(
+				Size( 400, 400 ),
+				Show Control Panel( 0 ),
+				Variables( X( Expr( Name Expr( colTime ) ) ),
+					Overlay( Expr( Name Expr( colValidation ) ) )
+				),
+				Elements(
+					Points( X, Legend( 6 ), Jitter( "Random Uniform" ), Jitter Limit( 1.633 ) )
+				),
+				SendToReport(
+					Dispatch(
+						{},
+						"400",
+						ScaleBox,
+						{Legend Model(
+							6,
+							Properties( 0, {Line Color( 32 )}, Item ID( "Training", 1 ) ),
+							Properties( 1, {Line Color( 11 )}, Item ID( "Validation", 1 ) ),
+							Properties( -1, {Line Color( 5 )}, Item ID( "Test", 1 ) )
+						)}
+					)
+				)
+			) )
+			
+		) );
+	);
+	window:target1graphs[t] << Append(timegraph);
+);
+
+DistributionofValidation = function( {dt, var, colValidation, t},
+	ToLog("In DistributionofValidation", 7);
+	Eval( Eval Expr(
+		timegraph = h list box(dt << Graph Builder(
+			Size( 200, 400 ),
+			Show Control Panel( 0 ),
+			Variables( Y( Expr( Name Expr( var ) ) ), Overlay( Expr( Name Expr( colValidation ) ) ) ),
+			Elements( Histogram( Y, Legend( 7 ), Histogram Style( "Kernel Density" ) ) ),
+			SendToReport(
+				Dispatch(
+					{},
+					"400",
+					ScaleBox,
+					{Legend Model(
+						7,
+						Properties( 0, {Fill Color( 32 )}, Item ID( "Training", 1 ) ),
+						Properties( 1, {Fill Color( 11 )}, Item ID( "Validation", 1 ) ),
+						Properties( 2, {Fill Color( 69 )}, Item ID( "Test", 1 ) )
+					)}
+				)
+			)
+		));
+	) );
+	window:targetvalidationdist[t] << Append(timegraph);
+);
+
+
+TimeSeriesAnalysis = function( {dt, var, t},
+	ToLog("In TimeSeriesAnalysis", 7);
+	ToLog(Eval List({Name Expr(dt),Name Expr(var),Name Expr(t)}), 9);
+	tse = Eval Expr( Expr( Name Expr( window:dtMaster) ) << Time Series( Y( Expr( Name Expr(var) ) ), Autocorrelation Lags( 100 ), Forecast Periods( 100 ) ) );
+	ts = Eval(tse); 
+	
+	//Get picture for UI
+	(ts << XPath("//NumberColBoxHeader[text()='AutoCorr']/..")) << Hide(1);
+	(ts << XPath("//NumberColBoxHeader[text()='Lag']/.."))[1] << Select;
+	(ts << XPath("//PlotColBoxHeader[text()='Plot Autocorr']/..")) << Select;
+	//p = (ts << XPath("//PlotColBoxHeader[text()='Plot Autocorr']/../.."))[1] << Get Picture;
+	tbl = (ts << XPath("//PlotColBoxHeader[text()='Plot Autocorr']/../.."))[1];
+	//p = tbl << Get Picture;
+	ob = Outlinebox("Time Series Analysis",
+		v scroll box( size(375), tbl << Get Picture),
+		Eval( Eval Expr( button box("Open Time Series", Expr( Name Expr(tse)) ) ) )
+	);
+	window:targettimeseries[t] << Append(ob);
+	
+	//Calc autocorrelation
+	AutoCorrs = (ts << XPath("//NumberColBoxHeader[text()='AutoCorr']/.."))[1] << Get;
+	Lags = (ts << XPath("//NumberColBoxHeader[text()='Lag']/.."))[1] << Get;
+	
+	LagsNextRowsOkay = transform each({l, i}, Lags, Output("Matrix"), Max(abs(AutoCorrs[i::min(n items(Lags), i+5)])) < 0.1 );
+	
+	if(sum(LagsNextRowsOkay)==0,
+		window:AutoCorrRows[i] = max(Lags),
+		window:AutoCorrRows[i] = min(Lags[Loc(LagsNextRowsOkay)]) + 1
+	);
+	ts << Close Window;
+);
+
+MakeTargetStats = function( {dt, var, colValidation, i},
+	ToLog("In TargetStats", 7);
+	//ToLog(Eval List({Name dt, var, colValidation, i}), 9);
+	
+	window:ValidationValues = window:colValidation << Get Values;
+	TrainingRows = as list(Loc(window:ValidationValues, 0));
+	ValidationRows = as list(Loc(window:ValidationValues, 1));
+	TestRows = as list(Loc(window:ValidationValues, 2));
+	
+	OtherRows = 1::nrow(dt);
+	for each({t}, TrainingRows || ValidationRows || TestRows, Remove From(OtherRows, Loc(OtherRows, t)[1]));
+	
+	Stats = Associative Array();
+	
+	Stats["Count"] = Associative Array();
+	Stats["Count"]["Training"] = n items(TrainingRows);
+	Stats["Count"]["Validation"] = n items(ValidationRows);
+	Stats["Count"]["Test"] = n items(TestRows);
+	Stats["Count"]["Other"] = n items(OtherRows);
+	Stats["Count"]["Total"] = nrow(dt);
+	
+	Stats["Frac"] = Associative Array();
+	Stats["Frac"]["Training"] = Stats["Count"]["Training"]/Stats["Count"]["Total"];
+	Stats["Frac"]["Validation"] = Stats["Count"]["Validation"]/Stats["Count"]["Total"];
+	Stats["Frac"]["Test"] = Stats["Count"]["Test"]/Stats["Count"]["Total"];
+	Stats["Frac"]["Other"] = Stats["Count"]["Other"]/Stats["Count"]["Total"];
+	Stats["Frac"]["Total"] = 1;
+	
+	
+	Stats["Frac of Included"] = Associative Array();
+	Stats["Frac of Included"]["Training"] = Stats["Count"]["Training"]/(Stats["Count"]["Training"]+Stats["Count"]["Validation"]+Stats["Count"]["Test"]);
+	Stats["Frac of Included"]["Validation"] = Stats["Count"]["Validation"]/(Stats["Count"]["Training"]+Stats["Count"]["Validation"]+Stats["Count"]["Test"]);
+	Stats["Frac of Included"]["Test"] =Stats["Count"]["Test"]/(Stats["Count"]["Training"]+Stats["Count"]["Validation"]+Stats["Count"]["Test"]) ;
+	Stats["Frac of Included"]["Other"] = .;
+	Stats["Frac of Included"]["Total"] = .;
+	
+	if( var != {},
+		Stats["Mean"] = Associative Array();
+		Stats["Mean"]["Training"] = Mean(var[TrainingRows]);
+		Stats["Mean"]["Validation"] = Mean(var[ValidationRows]);
+		Stats["Mean"]["Test"] = Mean(var[TestRows]);
+		Stats["Mean"]["Other"] = Mean(var[OtherRows]);
+		Stats["Mean"]["Total"] = col mean(var);
+		
+		Stats["Median"] = Associative Array();
+		Stats["Median"]["Training"] = Median(var[TrainingRows]);
+		Stats["Median"]["Validation"] = Median(var[ValidationRows]);
+		Stats["Median"]["Test"] = Median(var[TestRows]);
+		Stats["Median"]["Other"] = Median(var[OtherRows]);
+		Stats["Median"]["Total"] = col Median(var);
+		
+		Stats["StdDev"] = Associative Array();
+		Stats["StdDev"]["Training"] = StdDev(var[TrainingRows]);
+		Stats["StdDev"]["Validation"] = StdDev(var[ValidationRows]);
+		Stats["StdDev"]["Test"] = StdDev(var[TestRows]);
+		Stats["StdDev"]["Other"] = StdDev(var[OtherRows]);
+		Stats["StdDev"]["Total"] = col StdDev(var);
+		
+		Stats["Quant: 10%"] = Associative Array();
+		Stats["Quant: 10%"]["Training"] = Quantile(0.1, var[TrainingRows]);
+		Stats["Quant: 10%"]["Validation"] = Quantile(0.1, var[ValidationRows]);
+		Stats["Quant: 10%"]["Test"] = Quantile(0.1, var[TestRows]);
+		Stats["Quant: 10%"]["Other"] = Quantile(0.1, var[OtherRows]);
+		Stats["Quant: 10%"]["Total"] = Quantile(0.1, var << Get Values);
+				
+		Stats["Quant: 90%"] = Associative Array();
+		Stats["Quant: 90%"]["Training"] = Quantile(0.9, var[TrainingRows]);
+		Stats["Quant: 90%"]["Validation"] = Quantile(0.9, var[ValidationRows]);
+		Stats["Quant: 90%"]["Test"] = Quantile(0.9, var[TestRows]);
+		Stats["Quant: 90%"]["Other"] = Quantile(0.9, var[OtherRows]);
+		Stats["Quant: 90%"]["Total"] = Quantile(0.9, var << Get Values);
+	);
+	
+	addRowToTable = function( {table, aa, key},
+		ToLog("In addRowToTable", 7);
+		table << Add Row( { key, aa[key]["Training"], aa[key]["Validation"], aa[key]["Test"],aa[key]["Other"], aa[key]["Total"] } );
+	);
+	
+	window:targetstats[i] << Append(
+		Outline Box( "Statistics",
+			tbStats = table box("Statistics",
+				string col box( "Statistic",  {} ),
+				number col box( "Training",   {} ),
+				number col box( "Validation", {} ),
+				number col box( "Testing",    {} ),
+				number col box( "Other",      {} ),
+				number col box( "Total",      {} )
+			);
+			show("table made");
+			//addRowToTable(tbStats, Stats, "Count");
+			for each({key}, Stats << Get Keys, addRowToTable(tbStats, Stats, key));
+			show("done");
+			tbStats
+		)
+	)
+);
+
+updateUI = function({bybutton = 0},
+	ToLog("In UpdateUI", 7);
+	ToLog(Name Expr(bybutton), 9);
+	//Get values from UI - makes code easier to read
+	Window:ValidationType =(window:lbValidationType << Get Selected)[1];
+	Window:StratificationType = (window:lbStratificationType << Get Selected)[1];
+	colTarget = clbTarget << Get Selected;
+	
+	if(window:windowopen == 1, //Don't update until all display objects are drawn
+		window:AutoCorrRows = {0};
+		if((window:cbAutoRefresh << Get) | (bybutton == 1), //only update if on auto-refresh or button pushed
+			//Window should be updated
+			
+			
+			//Remove the previous table and window - it will be replaced (not efficient, improve this in the future)
+			try(if(is scriptable(window:dtSub), Close(window:dtSub, NoSave)));
+			
+			//Make a table to hold the new grouping and subset columns so main table is not modified
+			ToLog("updateUI: Subsetting Table", 7);
+			window:dtSub = window:dtMaster << Subset( Invisible,
+				Linked,
+				Suppress formula evaluation( 0 ),
+				All rows,
+				Selected columns only( 0 )
+			);
+			window:dtSub << Set Name( "Visualize Validation Column" );
+			
+			//Make a column with row number
+			colRow = window:dtSub << New Column("Row", Numeric, "Continuous", Format("Best", 12), Formula( row() ) );
+			
+			//Make a column to group data together
+			ToLog("updateUI: Creating Group Column", 7);
+			//Create Formula
+			groups = 1::nrow(window:dtSub);
+			thisgroup = 0;
+			rowingroup = window:GroupRows;
+			for each row(window:dtSub, 
+				if(	!excluded(),
+					if(	rowingroup >= window:GroupRows,
+						rowinGroup = 1;
+						thisgroup++,
+						rowinGroup++
+					);
+					groups[row()] = thisgroup,
+					groups[row()] = .
+				);
+				if(	(Window:ValidationType == "Grouping with Cutpoint") & (row() > (nrow() - window:CutpointRows)),
+					groups[row()] = .
+				);
+			);
+			
+			//Make column
+			if(
+				Window:ValidationType == "Individual Rows",
+				colGroup = {},
+				colGroup = { window:dtSub << New Column(
+					"Group", Numeric, "Nominal", Format("Best", 12), 
+					Set Values(groups)
+				) };
+			);
+						
+			//Identify stratification column
+			ToLog("updateUI: Identifying Stratification Column", 7);			
+			
+			colStrat =if( 
+				window:StratificationType == "Target Variable", window:clbTarget << Get Selected,
+				window:StratificationType == "Other Variable", window:clbStratificationCol << Get Selected, 
+				{}
+			);
+			//If too many selected and using groups then only us the first column
+			if((n items(colGroup) > 0 ) & (n items(colStrat) > 1),
+				New Window("Too many stratification Columns", << Modal,
+					v list box(
+						text box("Only one stratification column is allowed if using grouping, will only use the first selected column: " || colStrat[1] ),
+						Spacer box(Size(10,10)),
+						text box("To choose a different column, pick 'Other Variable' under stratification and select one there."),
+					)
+				);
+				colStrat = Eval List( { Name Expr( colStrat[1] ) } );
+			);
+			
+			//Set random seed for repeatable analyses
+			if(!is missing( window:nebRandomSeed << Get), random reset( window:nebRandomSeed << Get ) );
+			
+			
+			ToLog("updateUI: Creating Validation Column", 7);			
+			//Get fractions - set not needed (hidden) values to zero
+			ratios = Matrix( Eval List( {
+				window:nebTrainingFraction << Get
+			,
+				if(	window:ValidationType == "Cutpoint", 0,
+					window:nebValidationFraction << Get
+				)
+			,
+				if(	window:ValidationType == "Cutpoint", 0,
+					window:ValidationType == "Grouping with Cutpoint", 0,
+					window:nebTestFraction << Get
+				)
+			} ) );
+			
+			//Make Column Formula ratios and add stratification and grouping columns if using them
+			f = Eval Expr(
+				Make Validation Formula( Expr(ratios) );
+			);
+			if(!(colStrat == {}), insert into(f, Eval Expr( << Stratification Columns( Expr( Name Expr( colStrat ) )  ) ) ) );
+			if(!(colGroup == {}), insert into(f, Eval Expr(  << Grouping Columns( Expr( Name Expr( colGroup ) )  ) ) ) );
+			
+			//Set the current table - needed to evalute column formula in right context		
+			current data table(window:dtSub);
+			
+			//Evaluate validation formula for each row - don't actually write it to the table, just loop through row context
+			vals = transform each({r}, 1::nrow(window:dtSub), row() = r;
+				row() = r;
+				
+				if( //is part of cutpoint group - set to validation row
+					(Window:ValidationType == "Grouping") & (r >= (nrow(window:dtSub) + 1)),
+					v = 1
+				, //is part of cutpoint group - set to testing
+					(window:ValidationType == "Grouping with Cutpoint") & (r > (nrow(window:dtSub) - window:CutpointRows )),
+					v = 2
+				, //use validation formula
+					v = Eval(f);
+					v
+				)
+			);
+			
+			tolog("done setting vals");
+			current data table(window:dtMaster);
+			
+			//Save the validation column tot eh table
+			window:colValidation = window:dtSub << New Column(
+				window:tebColumnName << Get Text, 
+				Numeric,
+				"Nominal", 
+				Format("Best", 12),
+				Set Values(vals),
+				Value Labels({0 = "Training", 1 = "Validation", 2 = "Test"}),
+				Use Value Labels(1)
+			);
+			
+			window:dtSub << Run Formulas;
+			
+			ToLog("updateUI: Updating Graphs", 7);
+			//Remove existing graphs
+			c = window:vlbTargetAnalyses << Child;
+			for(i=0, (i <= 1000) & !is empty(c), i++,
+				c << Delete;
+				c = window:vlbTargetAnalyses << Child;
+			);
+			wait(0);
+			
+			
+			if(n items(colTarget) >= 1,
+			
+				foreach({cn, i}, colTarget, 
+					c = column(window:dtSub, cn);
+					window:vlbTargetAnalyses << Append(
+						outlinebox(cn,
+							window:targetanalyses[i] = h list box(
+								window:target1graphs[i] = v list box(),
+								window:targettimeseries[i] = v list box(),
+								window:targetvalidationdist[i] = v list box(),
+								window:targetstats[i] = v list box()
+							)
+						)
+					);
+					TimeSeriesChart(window:dtSub, c, window:colValidation, Name Expr(colRow), i);
+					TimeSeriesAnalysis(window:dtSub, c, i);
+					DistributionofValidation(window:dtSub, c, window:colValidation, i);
+					MakeTargetStats(window:dtSub, c, window:colValidation, i);
+				)
+			,
+				local({i=1},
+					window:vlbTargetAnalyses << Append(
+						outlinebox("Row",
+							window:targetanalyses[i] = h list box(
+								window:target1graphs[i] = v list box(),
+								window:targettimeseries[i] = v list box(),
+								window:targetvalidationdist[i] = v list box(),
+								window:targetstats[i] = v list box()
+							)
+						)
+					);
+					TimeSeriesChart(window:dtSub, {}, window:colValidation, Name Expr(colRow), i);
+					MakeTargetStats(window:dtSub, {}, window:colValidation, i);
+				);
+			);
+			
+			ToLog("updateUI: Update display objects specific to sub table.", 7);
+			window:ValidationValues = window:colValidation << Get Values;
+			window:tbRowCounts << set text (char(n items(Loc(window:ValidationValues, 0))) || " rows are in training\!N" || 
+				char(n items(Loc(window:ValidationValues, 1))) || " are in validation\!N" || 
+				char(n items(Loc(window:ValidationValues, 2))) || " are in Testing");
+			window:tbCurrentSubTable << set text( "Current working table: '" || (window:dtSub << Get Name) || "'.");
+			window:isDirty = 0;
+			
+			window:GroupSizeRecommendation = min(
+				floor(nrow(window:dtSub)/6),	
+				
+				//No more than 500 groups
+				max(		
+					floor(nrow(window:dtSub)/500),
+					
+					//More more than identified AutoCorrelation, increased by the number of rows
+					// if 200 rows the group size is doubled
+					floor( (max(window:AutoCorrRows) + 1) * ( 1 + nrow(window:dtSub) / 200 ) )
+				)
+			);
+			
+			window:tbGroupSizeRecommendation << Set Text( "Recommendation: " || char( window:GroupSizeRecommendation ) );
+			if(window:GroupRows != window:GroupSizeRecommendation,
+				window:tbGroupSizeRecommendation << Text Color("red"),
+				window:tbGroupSizeRecommendation << Text Color("black"),
+			);
+			
+		,
+			window:isDirty = 1;
+		);// end of should refresh
+			
+		
+		ToLog("updateUI: Update other display objects.", 7);
+		if(	Window:StratificationType == "None",
+			window:clbStratificationCol << Visibility( "Collapse" )
+		,	
+			Window:StratificationType == "Target Variable",
+			window:clbStratificationCol << Visibility( "Collapse" )
+		,	
+			window:clbStratificationCol << Visibility( "Visible" )
+		);
+		
+		if(	Window:ValidationType == "Individual Rows",
+			window:lbChooseGroupSize << Visibility( "Collapse" );
+			window:lbChooseCutpointSize << Visibility( "Collapse" );
+			window:tbValidationFraction << Visibility( "Visible" );
+			window:nebValidationFraction << Visibility( "Visible" );
+			window:tbTestFraction << Visibility( "Visible" );
+			window:nebTestFraction << Visibility( "Visible" );
+		,
+			Window:ValidationType == "Grouping",
+			window:lbChooseGroupSize << Visibility( "Visible" );
+			window:lbChooseCutpointSize << Visibility( "Collapse" );
+			window:tbValidationFraction << Visibility( "Visible" );
+			window:nebValidationFraction << Visibility( "Visible" );
+			window:tbTestFraction << Visibility( "Visible" );
+			window:nebTestFraction << Visibility( "Visible" );
+		,
+			Window:ValidationType == "Cutpoint",
+			window:lbChooseGroupSize << Visibility( "Collapse" );
+			window:lbChooseCutpointSize << Visibility( "Visible" );
+			window:tbValidationFraction << Visibility( "Collapse" );
+			window:nebValidationFraction << Visibility( "Collapse" );
+			window:tbTestFraction << Visibility( "Collapse" );
+			window:nebTestFraction << Visibility( "Collapse" );
+		,
+			Window:ValidationType == "Grouping with Cutpoint",
+			window:lbChooseGroupSize << Visibility( "Visible" );
+			window:lbChooseCutpointSize << Visibility( "Visible" );
+			window:tbValidationFraction << Visibility( "Visible" );
+			window:nebValidationFraction << Visibility( "Visible" );
+			window:tbTestFraction << Visibility( "Collapse" );
+			window:nebTestFraction << Visibility( "Collapse" );
+		);
+		
+		wait(0.1);
+		Current data table(window:dtMaster);
+	); //end of is window open
+);
+// Show(Summarize(Current data table(), window:CountRowsGroup=by(:Smoking History), window:CountRowsN = Count()))
+// https://community.jmp.com/t5/JSL-Cookbook/Combined-and-Connected-Number-Edit-Box-and-Slider-Box/ta-p/54255
+SliderNumberEditBox = Function( {nebref, nebinitval, sbref, sblower, sbupper, sbvar, 
+				nsName = "global", nebFunction = Expr(), sbFunction = Expr()}, 
+	ToLog("In SliderNumberEditBox", 7);
+    e = ( // evaluate to create the diplay boxes
+		Eval Expr( // evaluate everything wrapped with Expr()
+		  H List Box(
+			// Create the Number Edit Box
+			// As Scoped() is used when the variable names are to be dynamic
+			As Scoped( Expr( nsName ), Expr( nebref ) ) = Number Edit Box(
+			  Expr( nebinitval ),
+			  <<Set Function(
+				Function( {this},
+				  As Scoped( Expr( nsName ), Expr( sbref ) ) << set( this << get );
+				  updateUI();
+				  Expr( // Get the contents of the expression without evaluating it
+					Name Expr( nebFunction )
+				  );
+				)
+			  )
+			),
+			// Create the Slider Box, with the given name
+			As Scoped( Expr( nsName ), Expr( sbref ) ) = Slider Box(
+			  Expr( sblower ),
+			  Expr( sbupper ),
+			  As Scoped( Expr( nsName ), Expr( sbvar ) ), 
+			  As Scoped( Expr( nsName ), Expr( sbref ) ) << Set( Round( As Scoped( Expr( nsName ), Expr( sbvar ) ) ) );
+			  As Scoped( Expr( nsName ), Expr( nebref ) ) << Set( As Scoped( Expr( nsName ), Expr( sbvar ) ) );
+			  updateUI();
+			  Expr(
+				Name Expr( sbFunction )
+			  );
+			)
+		  )
+		)
+    );
+    //show(e);
+    eval(e);
+);
+
+nw = New Window( "Create Validation Column",
+	<< On Close(
+		try(Close(window:dtSub, NoSave));
+	),
+	window:LogLevel = 9;
+	window:windowopen = 0;
+	window:isDirty = 1;
+	window:SelectedTargets = {};
+	v list box( << Padding(10),
+		window:obHelp = outline box( "Comments",
+			h list box(
+				v list box(
+					text box("Is correlation between rows possible?", << Set Font Style("Bold") ),
+					text box("Correlation between rows is common in time series data when a system might not come to steady state before the next row.", << Set Wrap(850), << Padding( Left(5) )),
+					text box("If Correlation correlation between rows is possible:", << Set Font Style("Bold") ),
+					text box("Use grouping validation with a group size larger than the number of rows that you expect to correlate.  For example, " ||
+						"if an event happened in row 1, how many rows could still carry information from that event in row 1?", << Set Wrap(850), << Padding( Left(5) ) ),
+					text box("If correlation between rows is not possible:", << Set Font Style("Bold") ),
+					text box("If each row in your table is independent, use a group size of 1.", << Set Wrap(850), << Padding( Left(5) ) ),
+				)
+			)
+		),
+		Outline Box( "Settings", h list box(
+			window:pbChooseTarget = panel box( "Target",
+				text box("Choose target variable(s)."),
+				window:clbTarget = Col List Box(
+					window:dtMaster, 
+					all,
+					<< onChange(
+						ToLog("Changed target variables", 7);
+						if( window:SelectedTargets != window:clbTarget << Get Selected,
+							updateUI();
+							window:SelectedTargets = window:clbTarget << Get Selected
+						)
+					)
+				),
+				button box("Clear",
+					ToLog("Clear target variables", 7);
+					window:clbTarget << Clear Selection()
+				)
+			),
+			window:pbChooseStratificationStrategy = panel box( "Stratification",
+				text box("Choose stratification strategy."),
+				window:lbStratificationType = List Box({"None", "Target Variable", "Other Variable"}, 1, ToLog("Changed stratification strategy", 7); updateUI()),
+				window:clbStratificationCol = Col List Box(
+					window:dtMaster, 
+					all,
+					<< onChange( ToLog("Changed stratification column", 7);  updateUI() )
+				),
+				button box("Clear", ToLog("Cleared stratification column", 7); window:clbStratification << Clear Selection() )
+			),
+			window:pbChooseValidationType = panel box( "Validation Type",
+				text box("Choose a validation type"),
+				window:lbValidationType = List Box({"Individual Rows", "Grouping", "Cutpoint", "Grouping with Cutpoint"}, 1, ToLog("Changed validation type", 7); updateUI()),
+				window:lbChooseGroupSize = v list box( "Group",
+					spacer box( size(10,10) ),
+					text box("Rows per group:"),
+					snebGroupRows = h list box(),
+					h list box(
+						Spacer Box( size(10,10)),
+						v list box(
+							spacer box(size(4,4)),
+							window:tbGroupSizeRecommendation = text box( "Recommendation:" )
+						),
+						button box( "Use",
+							nebGroupRows << Set(window:GroupSizeRecommendation);
+							sbGroupRows << Set(window:GroupSizeRecommendation);
+							UpdateUI();
+						)
+					)
+				),
+				window:lbChooseCutpointSize = v list box( "Cutpoint",
+					spacer box( size(10,10) ),
+					text box("Number of cutpoint rows:" ),
+					snebCutPointRows = h list box();
+				)
+			),
+			panel box( "Settings",
+				text box("Random Seed"),
+				window:nebRandomSeed = Number Edit Box(., <<Set Function( Function({this}, ToLog("Changed random seed", 7);  UpdateUI()))),
+				window:tbTrainingFraction = text box("Training Fraction"),
+				window:nebTrainingFraction = Number Edit Box(num(ns:UserPref["Training Fraction"]), <<Set Function( Function({this}, ToLog("Changed training fraction", 7); UpdateUI()))),
+				window:tbValidationFraction = text box("Validation Fraction"),
+				window:nebValidationFraction = Number Edit Box(num(ns:UserPref["Validation Fraction"]), <<Set Function( Function({this}, ToLog("Changed validation fraction", 7); UpdateUI()))),
+				window:tbTestFraction = text box("TestFraction"),
+				window:nebTestFraction = Number Edit Box(num(ns:UserPref["Test Fraction"]), <<Set Function( Function({this}, ToLog("Changed test fraction", 7); UpdateUI()))),
+				text box("Column Name:"),
+				window:tebColumnName = text edit box(ns:UserPref["Column Name"], << Set Script( ToLog("Changed column name", 7) ), << Set Width(85) );
+			),
+			Panel Box( "Actions",
+				button box("Create Column",
+					ToLog("Create Column", 7);
+					if(window:isDirty == 1, UpdateUI(0));
+					wait(0);
+					ToLog("Creating Column", 7);
+					window:colValidationScript = window:colValidation << Get Script;
+					Eval(Eval Expr( window:dtMaster << Expr( Name Expr (window:colValidationScript))));
+				),
+				h list box(
+					button box("Preview ", ToLog("Preview", 7); updateUI(1)),
+					window:cbAutoRefresh = check box("Auto Refresh", ToLog("Changed refresh automatically", 7); updateUI())
+				),
+				button box("Close", nw << Close Window )
+			)
+		) ),
+		spacer box(size(20,20)),
+		h list box(
+			window:vlbTargetAnalyses = v list box()
+		),
+		window:obUnderTheHood = outline box("Under the hood",
+			button box("Show Data Table", window:dtMaster << Bring Window to Front ),
+			window:tbCurrentTable = text box(),
+			button box("Show Working Data Table", window:dtSub << Bring Window to Front ),
+			window:tbCurrentSubTable = text box(),
+			spacer box(size(20,20)),
+			button box("Show Symbols", show symbols() ),
+			button box("Show Window Symbol Keys", show (namespace("window") << get keys) ),
+			text box("Choose log level (writes to JMP's log)."),
+			window:clbLogLevel = List Box({"Highest","High", "Low", "None"}, maxselected(1), window:LogLevel = {9,7,4,1}[window:clbLogLevel << Get Selected Indices][1] ),
+			<<Close
+		)
+	),
+	window:clbLogLevel << Set Selected(2);
+	ToLog("In Main Window Script", 7);
+	window:clbTarget << Clear Selection();
+	window:lbStratificationType << Set Selected(2);
+	if(ns:UserPref["Auto Refresh"] == "Yes", window:cbAutoRefresh << Set(1,1) );
+	window:dtMaster = here:dtMaster;
+	window:dtSub = "";
+	window:CutpointRows = floor(nrow(window:dtMaster) / 4);
+	window:AutoCorrRows = {0};
+	window:GroupRows = min(
+		floor(nrow(window:dtMaster)/6),	
+		max(		
+			floor(nrow(window:dtMaster)/500),
+			floor( (max(window:AutoCorrRows) + 1) * ( 1 + nrow(window:dtMaster) / 200 ) )
+		)
+	);
+	window:targetanalyses = {};
+	window:target1graphs = {};
+	window:targettimeseries = {};
+	window:targetvalidationdist= {};
+	window:tbRowCounts = {};
+	window:targetstats = {};
+	window:lbValidationType << Set Selected(2);
+	if( ns:UserPref["OpenHelp"] == "No", window:obHelp << Close);
+	snebCutpointRows << Append(SliderNumberEditBox(
+		"nebCutpointRows",  // NumberEditBox variable name
+		window:CutpointRows,        // Initial value
+		"sbCutpointRows",   // SliderBox variable name
+		1,        // Min value
+		floor(nrow(window:dtMaster) / 2),        // Max value
+		"CutpointRows",      // SliderBox value variable name
+		"window", // Namespace name for symbols
+		Expr(     // NumberEditBox function (as an expression)
+			//show(window:CutpointRows)
+		),
+		Expr(     // SliderBox function (as an expression)
+			//show(window:CutpointRows)
+		)
+	) );
+	snebGroupRows << Append(SliderNumberEditBox(
+		"nebGroupRows",  // NumberEditBox variable name
+		window:GroupRows,        // Initial value
+		"sbGroupRows",   // SliderBox variable name
+		1,        // Min value
+		floor(nrow(window:dtMaster) / 5),        // Max value
+		"GroupRows",      // SliderBox value variable name
+		"window", // Namespace name for symbols
+		Expr(     // NumberEditBox function (as an expression)
+			//show(window:CutpointRows)
+		),
+		Expr(     // SliderBox function (as an expression)
+			//show(window:CutpointRows)
+		)
+	) );
+	
+	window:tbCurrentTable << set text( "Current data table: '" || (window:dtMaster << Get Name) || "'.");
+	window:windowopen = 1;
+	
+	updateUI();
+	
+	ToLog("Done with Main window start script", 7);
+);
+
+//nebGroupSize << Set(1);
+//lbValidationType << Set Selected( 1 );
+Current data table(dtMaster);

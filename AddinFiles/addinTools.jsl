@@ -1,0 +1,12 @@
+Names default to here( 1 );
+
+//Set this to the add-in ID:
+thisAddIn = "com.github.himanga.JMPValidation";
+
+//get or make namespace for this add-in
+If( 
+	!Namespace Exists( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = New Namespace( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = Namespace( Eval( thisAddIn ) || ".addinnamespace" )
+);
+

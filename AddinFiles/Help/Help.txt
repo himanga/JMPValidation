@@ -1,0 +1,18 @@
+Title: JMP Validation
+
+This helps create validation columns that are useful for process or manufacturing data that includes time series data.
+
+About: Version
+Find the latest version of this add-in here:
+
+https://community.jmp.com/t5/JMP-Add-Ins/Validation-for-Continuous-Processing-Data/ta-p/517689
+
+The latest source code is available here:
+
+https://github.com/himanga/JMPValidation
+
+About: Developer
+Created by Isaac Himanga and Drew Luebe
+
+Submit bug reports via github at the link <above: Version>.
+

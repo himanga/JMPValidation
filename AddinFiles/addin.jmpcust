@@ -1,0 +1,32 @@
+<jm:menu_and_toolbar_customizations xmlns:jm="http://www.jmp.com/ns/menu" version="3">
+  <jm:insert_in_main_menu>
+    <jm:insert_in_menu>
+      <jm:name>Add-Ins</jm:name>
+      <jm:insert_after>
+        <jm:name></jm:name>
+        <jm:menu>
+          <jm:name>Validation</jm:name>
+          <jm:caption>Validation</jm:caption>
+		  <jm:command>
+		    <jm:name>Create Process Data Validation Column</jm:name>
+		    <jm:caption>Process Data Validation</jm:caption>
+		    <jm:action type="path">$ADDIN_HOME(com.github.himanga.JMPValidation)\NewValidationColumn.jsl</jm:action>
+		    <jm:tip>Create validation columns intended for use with process data.</jm:tip>
+		  </jm:command>
+          <jm:command>
+            <jm:name>USER PREFERENCES</jm:name>
+            <jm:caption>User Preferences</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.github.himanga.JMPValidation)\addinUserPrefMenu.jsl</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+          <jm:command>
+            <jm:name>ABOUT</jm:name>
+            <jm:caption>About</jm:caption>
+            <jm:action type="path">$ADDIN_HOME(com.github.himanga.JMPValidation)\addinAbout.jsl</jm:action>
+            <jm:icon type="none"></jm:icon>
+          </jm:command>
+        </jm:menu>
+      </jm:insert_after>
+    </jm:insert_in_menu>
+  </jm:insert_in_main_menu>
+</jm:menu_and_toolbar_customizations>

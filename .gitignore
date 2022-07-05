@@ -1,0 +1,12 @@
+archive/**
+NaturalDocs/**
+AddinFilesTempForBuild/**
+!NaturalDocs/Comments.txt
+!NaturalDocs/Languages.txt
+!NaturalDocs/Project.txt
+AddinFiles/Docs/**
+!AddinFiles/Docs/Docs.txt
+TestAddinHome/**
+/Tests/Results/**
+*.jmpaddin
+*.zip

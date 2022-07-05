@@ -1,0 +1,73 @@
+Names default to here( 1 );
+
+//Set this to the add-in ID:
+thisAddIn = "com.github.himanga.JMPValidation";
+
+//get or make namespace for this add-in
+If( 
+	!Namespace Exists( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = New Namespace( Eval( thisAddIn ) || ".addinnamespace" ),
+	ns = Namespace( Eval( thisAddIn ) || ".addinnamespace" )
+);
+
+//store the home directory for this add-in
+ns:addinhome = "$ADDIN_HOME(" || thisAddIn || ")\";
+
+//read a file with information about the add-in (name, developer, etc)
+ns:metadata_aa = Include( ns:addinhome || "customMetadata.jsl" );
+
+//load misc functions used across the whole add-in,
+//and functions to log usage information, check for updates, and store user preferences
+Include( ns:addinhome || "addinLog.jsl" );
+Include( ns:addinhome || "addinUserPref.jsl" );
+for each({f},files in directory( "functions", recursive(1) ),include("functions/" || f));
+
+//set default preference values
+ns:DefaultPref = Associative Array({
+	{"OpenHelp", "Yes"},
+	{"Training Fraction", 0.75},
+	{"Validation Fraction", .25},
+	{"Test Fraction", 0},
+	{"Column Name", "Validation"},
+	{"Auto Refresh", "Yes" }
+});
+
+//set preference types, descriptions, and value restrictions
+ns:PrefInfo = Associative Array({
+	{"OpenHelp", {
+		"Should the help section at the top be open by default (Yes/No)",
+		"char",
+		{"Yes", "No"}
+	}},
+	{"Training Fraction", {
+		"Default training split (a number between 0 and 1)",
+		"char",
+		{}
+	}},
+	{"Validation Fraction", {
+		"Default validation split (a number between 0 and 1)",
+		"char",
+		{}
+	}},
+	{"Test Fraction", {
+		"Default test split (a number between 0 and 1)",
+		"char",
+		{}
+	}},
+	{"Column Name", {
+		"Default name for the validatoin columns save to the table",
+		"char",
+		{}
+	}},
+	{"Auto Refresh", {
+		"Should the UI auto-refresh by default (Yes/No)",
+		"char",
+		{"Yes", "No"}
+	}}
+});
+
+//Load user preferences
+ns:LoadUserPref();
+
+// About: Log that the add-in was loaded
+ns:logusage( "Load" );
