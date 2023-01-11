@@ -318,12 +318,15 @@ updateUI = function({bybutton = 0},
 			);
 			//If too many selected and using groups then only us the first column
 			if((n items(colGroup) > 0 ) & (n items(colStrat) > 1),
-				New Window("Too many stratification Columns", << Modal,
-					v list box(
-						text box("Only one stratification column is allowed if using grouping, will only use the first selected column: " || colStrat[1] ),
-						Spacer box(Size(10,10)),
-						text box("To choose a different column, pick 'Other Variable' under stratification and select one there."),
-					)
+					if(window:DisplayedStratificationMessageThisSession != 1,
+					window:DisplayedStratificationMessageThisSession = 1;
+					New Window("Too many stratification Columns", << Modal,
+						v list box(
+							text box("Only one stratification column is allowed if using grouping, will only use the first selected column: " || colStrat[1] ),
+							Spacer box(Size(10,10)),
+							text box("To choose a different column, pick 'Other Variable' under stratification and select one there."),
+						)
+					);
 				);
 				colStrat = Eval List( { Name Expr( colStrat[1] ) } );
 			);
@@ -563,6 +566,7 @@ nw = New Window( "Create Validation Column",
 	window:windowopen = 0;
 	window:isDirty = 1;
 	window:SelectedTargets = {};
+	window:DisplayedStratificationMessageThisSession = 0;
 	v list box( << Padding(10),
 		window:obHelp = outline box( "Comments",
 			h list box(
