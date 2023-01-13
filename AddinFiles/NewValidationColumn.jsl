@@ -253,7 +253,7 @@ updateUI = function({bybutton = 0}, {default local},
 	//Get values from UI - makes code easier to read
 	Window:ValidationType =(window:lbValidationType << Get Selected)[1];
 	Window:StratificationType = (window:lbStratificationType << Get Selected)[1];
-	colTarget = clbTarget << Get Selected;
+	colTarget = lbTarget << Get Selected;
 	
 	if(window:windowopen == 1, //Don't update until all display objects are drawn
 		window:AutoCorrRows = {0};
@@ -310,10 +310,10 @@ updateUI = function({bybutton = 0}, {default local},
 						
 			//Identify stratification column
 			ToLog("updateUI: Identifying Stratification Column", 7);			
-			
+			show(window:lbTarget << Get Selected);
 			colStrat =if( 
-				window:StratificationType == "Target Variable", window:clbTarget << Get Selected,
-				window:StratificationType == "Other Variable", window:clbStratificationCol << Get Selected, 
+				window:StratificationType == "Target Variable", window:lbTarget << Get Selected,
+				window:StratificationType == "Other Variable", window:lbStratificationCol << Get Selected, 
 				{}
 			);
 			//If too many selected and using groups then only us the first column
@@ -477,12 +477,12 @@ updateUI = function({bybutton = 0}, {default local},
 		
 		ToLog("updateUI: Update other display objects.", 7);
 		if(	Window:StratificationType == "None",
-			window:clbStratificationCol << Visibility( "Collapse" )
+			window:lbStratificationCol << Visibility( "Collapse" )
 		,	
 			Window:StratificationType == "Target Variable",
-			window:clbStratificationCol << Visibility( "Collapse" )
+			window:lbStratificationCol << Visibility( "Collapse" )
 		,	
-			window:clbStratificationCol << Visibility( "Visible" )
+			window:lbStratificationCol << Visibility( "Visible" )
 		);
 		
 		if(	Window:ValidationType == "Individual Rows",
@@ -572,6 +572,7 @@ nw = New Window( "Create Validation Column",
 	window:isDirty = 1;
 	window:SelectedTargets = {};
 	window:DisplayedStratificationMessageThisSession = 0;
+	window:dtMaster = current data table();
 	v list box( << Padding(10),
 		window:obHelp = outline box( "Comments",
 			h list box(
@@ -589,28 +590,26 @@ nw = New Window( "Create Validation Column",
 		Outline Box( "Settings", h list box(
 			window:pbChooseTarget = panel box( "Target",
 				text box("Choose target variable(s)."),
-				window:clbTarget = Col List Box(
-					window:dtMaster, 
-					all,
+				window:lbTarget = List Box(
+					filter each( {c,i}, window:dtMaster << Get Column References, (c << get excluded) == 0), 
 					<< onChange(
 						ToLog("Changed target variables", 7);
-						if( window:SelectedTargets != window:clbTarget << Get Selected,
+						if( window:SelectedTargets != window:lbTarget << Get Selected,
 							updateUI();
-							window:SelectedTargets = window:clbTarget << Get Selected
+							window:SelectedTargets = window:lbTarget << Get Selected
 						)
 					)
 				),
 				button box("Clear",
 					ToLog("Clear target variables", 7);
-					window:clbTarget << Clear Selection()
+					window:lbTarget << Clear Selection()
 				)
 			),
 			window:pbChooseStratificationStrategy = panel box( "Stratification",
 				text box("Choose stratification strategy."),
 				window:lbStratificationType = List Box({"None", "Target Variable", "Other Variable"}, 1, ToLog("Changed stratification strategy", 7); updateUI()),
-				window:clbStratificationCol = Col List Box(
-					window:dtMaster, 
-					all,
+				window:lbStratificationCol = List Box(
+					filter each( {c,i}, window:dtMaster << Get Column References, (c << get excluded) == 0), 
 					<< onChange( ToLog("Changed stratification column", 7);  updateUI() )
 				),
 				button box("Clear", ToLog("Cleared stratification column", 7); window:clbStratification << Clear Selection() )
@@ -651,7 +650,7 @@ nw = New Window( "Create Validation Column",
 				window:tbTestFraction = text box("TestFraction"),
 				window:nebTestFraction = Number Edit Box(num(ns:UserPref["Test Fraction"]), <<Set Function( Function({this}, ToLog("Changed test fraction", 7); UpdateUI()))),
 				text box("Column Name:"),
-				window:tebColumnName = text edit box(ns:UserPref["Column Name"], << Set Script( ToLog("Changed column name", 7) ), << Set Width(85) );
+				window:tebColumnName = text edit box(ns:UserPref["Column Name"], << Set Script( ToLog("Changed column name", 7); UpdateUI() ), << Set Width(85) );
 			),
 			Panel Box( "Actions",
 				button box("Create Column",
@@ -688,8 +687,8 @@ nw = New Window( "Create Validation Column",
 	),
 	window:clbLogLevel << Set Selected(2);
 	ToLog("In Main Window Script", 7);
-	window:clbTarget << Clear Selection();
-	window:clbStratificationCol << Clear Selection();
+	//window:lbTarget << Clear Selection();
+	window:lbStratificationCol << Clear Selection();
 	window:lbStratificationType << Set Selected(2);
 	if(ns:UserPref["Auto Refresh"] == "Yes", window:cbAutoRefresh << Set(1,1) );
 	window:dtMaster = here:dtMaster;
