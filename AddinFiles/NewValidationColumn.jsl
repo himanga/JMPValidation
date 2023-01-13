@@ -224,7 +224,7 @@ MakeTargetStats = function( {dt, var, colValidation, i},
 	);
 	
 	addRowToTable = function( {table, aa, key},
-		ToLog("In addRowToTable", 7);
+		ToLog("In addRowToTable", 9);
 		table << Add Row( { key, aa[key]["Training"], aa[key]["Validation"], aa[key]["Test"],aa[key]["Other"], aa[key]["Total"] } );
 	);
 	
@@ -247,7 +247,7 @@ MakeTargetStats = function( {dt, var, colValidation, i},
 	)
 );
 
-updateUI = function({bybutton = 0},
+updateUI = function({bybutton = 0}, {default local},
 	ToLog("In UpdateUI", 7);
 	ToLog(Name Expr(bybutton), 9);
 	//Get values from UI - makes code easier to read
@@ -332,10 +332,10 @@ updateUI = function({bybutton = 0},
 			);
 			
 			//Set random seed for repeatable analyses
+			ToLog("updateUI: Set random seed", 9);
 			if(!is missing( window:nebRandomSeed << Get), random reset( window:nebRandomSeed << Get ) );
 			
-			
-			ToLog("updateUI: Creating Validation Column", 7);			
+			ToLog("updateUI: Calculate ratios of training, validation, and test data", 9);			
 			//Get fractions - set not needed (hidden) values to zero
 			ratios = Matrix( Eval List( {
 				window:nebTrainingFraction << Get
@@ -351,6 +351,7 @@ updateUI = function({bybutton = 0},
 			} ) );
 			
 			//Make Column Formula ratios and add stratification and grouping columns if using them
+			ToLog("updateUI: Create validation formula", 9);
 			f = Eval Expr(
 				Make Validation Formula( Expr(ratios) );
 			);
@@ -358,9 +359,11 @@ updateUI = function({bybutton = 0},
 			if(!(colGroup == {}), insert into(f, Eval Expr(  << Grouping Columns( Expr( Name Expr( colGroup ) )  ) ) ) );
 			
 			//Set the current table - needed to evalute column formula in right context		
+			tolog("updateUI: Select sub table", 9);
 			current data table(window:dtSub);
 			
 			//Evaluate validation formula for each row - don't actually write it to the table, just loop through row context
+			ToLog("updateUI: Calculate validation values", 9);
 			vals = transform each({r}, 1::nrow(window:dtSub), row() = r;
 				row() = r;
 				
@@ -376,10 +379,11 @@ updateUI = function({bybutton = 0},
 				)
 			);
 			
-			tolog("done setting vals");
+			tolog("updateUI: Select master table", 9);
 			current data table(window:dtMaster);
 			
-			//Save the validation column tot eh table
+			//Save the validation column to the table
+			ToLog("updateUI: Creating Validation Column", 9);
 			window:colValidation = window:dtSub << New Column(
 				window:tebColumnName << Get Text, 
 				Numeric,
@@ -390,6 +394,7 @@ updateUI = function({bybutton = 0},
 				Use Value Labels(1)
 			);
 			
+			ToLog("updateUI: Done creating column, rerunning formulas", 9);
 			window:dtSub << Run Formulas;
 			
 			ToLog("updateUI: Updating Graphs", 7);
@@ -684,6 +689,7 @@ nw = New Window( "Create Validation Column",
 	window:clbLogLevel << Set Selected(2);
 	ToLog("In Main Window Script", 7);
 	window:clbTarget << Clear Selection();
+	window:clbStratificationCol << Clear Selection();
 	window:lbStratificationType << Set Selected(2);
 	if(ns:UserPref["Auto Refresh"] == "Yes", window:cbAutoRefresh << Set(1,1) );
 	window:dtMaster = here:dtMaster;
