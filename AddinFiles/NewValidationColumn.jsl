@@ -238,10 +238,10 @@ MakeTargetStats = function( {dt, var, colValidation, i},
 				number col box( "Other",      {} ),
 				number col box( "Total",      {} )
 			);
-			show("table made");
+			
 			//addRowToTable(tbStats, Stats, "Count");
 			for each({key}, Stats << Get Keys, addRowToTable(tbStats, Stats, key));
-			show("done");
+			
 			tbStats
 		)
 	)
@@ -310,7 +310,7 @@ updateUI = function({bybutton = 0}, {default local},
 						
 			//Identify stratification column
 			ToLog("updateUI: Identifying Stratification Column", 7);			
-			show(window:lbTarget << Get Selected);
+			
 			colStrat =if( 
 				window:StratificationType == "Target Variable", window:lbTarget << Get Selected,
 				window:StratificationType == "Other Variable", window:lbStratificationCol << Get Selected, 
@@ -522,7 +522,7 @@ updateUI = function({bybutton = 0}, {default local},
 		Current data table(window:dtMaster);
 	); //end of is window open
 );
-// Show(Summarize(Current data table(), window:CountRowsGroup=by(:Smoking History), window:CountRowsN = Count()))
+
 // https://community.jmp.com/t5/JSL-Cookbook/Combined-and-Connected-Number-Edit-Box-and-Slider-Box/ta-p/54255
 SliderNumberEditBox = Function( {nebref, nebinitval, sbref, sblower, sbupper, sbvar, 
 				nsName = "global", nebFunction = Expr(), sbFunction = Expr()}, 
@@ -559,7 +559,7 @@ SliderNumberEditBox = Function( {nebref, nebinitval, sbref, sblower, sbupper, sb
 		  )
 		)
     );
-    //show(e);
+    
     eval(e);
 );
 
