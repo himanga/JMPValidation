@@ -590,7 +590,7 @@ nw = New Window( "Create Validation Column",
 			window:pbChooseTarget = panel box( "Target",
 				text box("Choose target variable(s)."),
 				window:lbTarget = List Box(
-					filter each( {c,i}, window:dtMaster << Get Column References, (c << get excluded) == 0), 
+					filter each( {c,i}, window:dtMaster << Get Column References, ((c << get excluded) == 0) & ((c << get data type) == "Numeric")), 
 					<< onChange(
 						ToLog("Changed target variables", 7);
 						if( window:SelectedTargets != window:lbTarget << Get Selected,
@@ -608,7 +608,7 @@ nw = New Window( "Create Validation Column",
 				text box("Choose stratification strategy."),
 				window:lbStratificationType = List Box({"None", "Target Variable", "Other Variable"}, 1, ToLog("Changed stratification strategy", 7); updateUI()),
 				window:lbStratificationCol = List Box(
-					filter each( {c,i}, window:dtMaster << Get Column References, (c << get excluded) == 0), 
+					filter each( {c,i}, window:dtMaster << Get Column References, ((c << get excluded) == 0) & ((c << get data type) == "Numeric")),
 					<< onChange( ToLog("Changed stratification column", 7);  updateUI() )
 				),
 				button box("Clear", ToLog("Cleared stratification column", 7); window:clbStratification << Clear Selection() )
