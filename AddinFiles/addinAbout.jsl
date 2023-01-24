@@ -45,6 +45,10 @@ Eval( Eval Expr( aboutwin = new window( "About",
 		text box( "Name in JMP: " || ns:metadata_aa["name"], << set width( 500 ) ),
 		text box( "Development Status: " || ns:metadata_aa["state"], << set width( 500 )	),
 		spacer box( 100, 100 ),
+		bb = Button Box( "Open Change Log",
+			Web( Expr( "file://" || Convert File Path( ns:addinhome ) || "CHANGELOG.md" ), JMP window ),
+			<< Style(Underline)
+		),
 		bb = Button Box( "Open Documentation",
 			Web( Expr( "file://" || Convert File Path( ns:addinhome ) || "Docs/index.html#File:Help/Help.txt" ), JMP window ),
 			<< Style(Underline)

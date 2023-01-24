@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [HEAD]
 
 ### Added
-- 
+- View change log from UI on About screen
 
 ### Changed
 
