@@ -254,7 +254,8 @@ updateUI = function({bybutton = 0}, {default local},
 	Window:ValidationType =(window:lbValidationType << Get Selected)[1];
 	Window:StratificationType = (window:lbStratificationType << Get Selected)[1];
 	colTarget = lbTarget << Get Selected;
-	
+	window:isDirty = 1;
+
 	if(window:windowopen == 1, //Don't update until all display objects are drawn
 		window:AutoCorrRows = {0};
 		if((window:cbAutoRefresh << Get) | (bybutton == 1), //only update if on auto-refresh or button pushed
@@ -449,7 +450,6 @@ updateUI = function({bybutton = 0}, {default local},
 				char(n items(Loc(window:ValidationValues, 1))) || " are in validation\!N" || 
 				char(n items(Loc(window:ValidationValues, 2))) || " are in Testing");
 			window:tbCurrentSubTable << set text( "Current working table: '" || (window:dtSub << Get Name) || "'.");
-			window:isDirty = 0;
 			
 			window:GroupSizeRecommendation = min(
 				floor(nrow(window:dtSub)/6),	
@@ -470,8 +470,7 @@ updateUI = function({bybutton = 0}, {default local},
 				window:tbGroupSizeRecommendation << Text Color("black"),
 			);
 			
-		,
-			window:isDirty = 1;
+			window:isDirty = 0;
 		);// end of should refresh
 			
 		
@@ -655,7 +654,7 @@ nw = New Window( "Create Validation Column",
 			Panel Box( "Actions",
 				button box("Create Column",
 					ToLog("Create Column", 7);
-					if(window:isDirty == 1, UpdateUI(0));
+					if(window:isDirty == 1, UpdateUI(1));
 					wait(0);
 					ToLog("Creating Column", 7);
 					window:colValidationScript = window:colValidation << Get Script;
