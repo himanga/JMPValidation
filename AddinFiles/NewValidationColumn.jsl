@@ -247,6 +247,22 @@ MakeTargetStats = function( {dt, var, colValidation, i},
 	)
 );
 
+GetGroupSizeRecommendation() = Function( {d},
+	show(d, window:ActiveRowCount, window:AutoCorrRows);
+	min(
+		floor(window:ActiveRowCount/6),	
+		
+		//No more than 500 groups
+		max(		
+			floor(window:ActiveRowCount/500),
+			
+			//More more than identified AutoCorrelation, increased by the number of rows
+			// if 200 rows the group size is doubled
+			floor( (max(window:AutoCorrRows) + 1) * ( 1 + window:ActiveRowCount / 200 ) )
+		)
+	)
+);;
+
 updateUI = function({bybutton = 0}, {default local},
 	ToLog("In UpdateUI", 7);
 	ToLog(Name Expr(bybutton), 9);
@@ -450,19 +466,8 @@ updateUI = function({bybutton = 0}, {default local},
 				char(n items(Loc(window:ValidationValues, 1))) || " are in validation\!N" || 
 				char(n items(Loc(window:ValidationValues, 2))) || " are in Testing");
 			window:tbCurrentSubTable << set text( "Current working table: '" || (window:dtSub << Get Name) || "'.");
-			
-			window:GroupSizeRecommendation = min(
-				floor(nrow(window:dtSub)/6),	
-				
-				//No more than 500 groups
-				max(		
-					floor(nrow(window:dtSub)/500),
-					
-					//More more than identified AutoCorrelation, increased by the number of rows
-					// if 200 rows the group size is doubled
-					floor( (max(window:AutoCorrRows) + 1) * ( 1 + nrow(window:dtSub) / 200 ) )
-				)
-			);
+			window:ActiveRowCount = nrow(window:dtSub) - n items(window:dtSub << get excluded rows);
+			window:GroupSizeRecommendation = GetGroupSizeRecommendation(window:dtSub);
 			
 			window:tbGroupSizeRecommendation << Set Text( "Recommendation: " || char( window:GroupSizeRecommendation ) );
 			if(window:GroupRows != window:GroupSizeRecommendation,
@@ -694,13 +699,9 @@ nw = New Window( "Create Validation Column",
 	window:dtSub = "";
 	window:CutpointRows = floor(nrow(window:dtMaster) / 4);
 	window:AutoCorrRows = {0};
-	window:GroupRows = min(
-		floor(nrow(window:dtMaster)/6),	
-		max(		
-			floor(nrow(window:dtMaster)/500),
-			floor( (max(window:AutoCorrRows) + 1) * ( 1 + nrow(window:dtMaster) / 200 ) )
-		)
-	);
+	window:ActiveRowCount = nrow(window:dtMaster) - n items(window:dtMaster << get excluded rows);
+	window:GroupSizeRecommendation = GetGroupSizeRecommendation(window:dtMaster);
+	window:GroupRows = window:GroupSizeRecommendation;
 	window:targetanalyses = {};
 	window:target1graphs = {};
 	window:targettimeseries = {};
