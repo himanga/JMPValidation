@@ -28,6 +28,9 @@ $customMetadataPath = $TempPath+"customMetadata.jsl"
   Out-File $customMetadataPath
 $content = Get-Content -path $customMetadataPath
 
+#Copy changelog into add-in directory
+Copy-Item -Path "CHANGELOG.md" -Destination $TempPath"CHANGELOG.md"
+
 #Make add-in file
 $ZipFileName = $FilePathPrefix+".zip"
 $AddinFileName = $FilePathPrefix+".jmpaddin"
