@@ -29,7 +29,9 @@ $customMetadataPath = $TempPath+"customMetadata.jsl"
 $content = Get-Content -path $customMetadataPath
 
 #Copy changelog into add-in directory
-Copy-Item -Path "CHANGELOG.md" -Destination $TempPath"CHANGELOG.md"
+Copy-Item -Path "CHANGELOG.md" -Destination $TempPath"CHANGELOG.txt"
+Copy-Item -Path "README.md" -Destination $TempPath"README.txt"
+Copy-Item -Path "LICENSE" -Destination $TempPath"LICENSE.txt"
 
 #Make add-in file
 $ZipFileName = $FilePathPrefix+".zip"
