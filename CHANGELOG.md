@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [HEAD]
+## [0.02]
 
 ### Added
 - View change log, license, and other info from UI on About screen

@@ -13,13 +13,13 @@ Associative Array(
 		List( "abouttext", "Facilitates creating validation columns that are useful for continuous process or manufacturing data." ),
 		List( "addinVersion", 0.02 ),
 		List( "author", "Isaac Himanga and Drew Luebe" ),
-		List( "buildDate", 3720593827 ),
+		List( "buildDate", 3757578585 ),
 		List( "deployedAddinsFilename", "publishedAddins.jsl" ),
 		List( "deployedAddinsLoc", "" ),
 		List( "developer", "Isaac Himanga and Drew Luebe" ),
 		List( "developeremail", "Message us on the JMP community or github." ),
 		List( "id", "com.github.himanga.JMPValidation" ),
 		List( "name", "JMP Validation" ),
-		List( "state", "DEV" )
+		List( "state", "PROD" )
 	)
 )
