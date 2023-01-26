@@ -1,9 +1,18 @@
-# JMP OSI PI Data
+# JMP Validation
 This add-in is available in the Add-Ins section of the JMP Community.  Find it here:
 https://community.jmp.com/t5/JMP-Add-Ins/Validation-for-Continuous-Processing-Data/ta-p/517689
 
 Source code is available on github:
 https://github.com/himanga/JMPValidation
+
+## License
+This file is part of the JMP Validation Add-In.
+
+JMP Validation Add-In is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+JMP Validation Add-In is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with JMP Validation Add-In. If not, see <https://www.gnu.org/licenses/>.
 
 ## Building from Source
 Run the build.ps1 powershell script.  This builds the documentation files and copies the contents of the AddinFiles folder to a zip file with a .jmpaddin extension.
